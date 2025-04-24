@@ -37,6 +37,17 @@ musicToggle.addEventListener('click', () => {
 
 function generateRandomNotifications() {
   playButton.style.display = 'none';
+  const isMobile = window.innerWidth <= 767;
+  const notificationWidth = isMobile ? 160 : 280; // Match CSS notification width
+  const notificationHeight = isMobile ? 120 : 200; // Match CSS notification height
+  const safeMargin = 10; // Margin to keep notifications within viewport
+  const maxX = window.innerWidth - notificationWidth - safeMargin;
+  const maxY = window.innerHeight - notificationHeight - safeMargin;
+  const gridSize = isMobile ? 2 : 4; // Fewer grid cells on mobile to reduce overlap
+  const cellWidth = window.innerWidth / gridSize;
+  const cellHeight = window.innerHeight / gridSize;
+  const usedPositions = new Set();
+
   for (let i = 0; i < notificationCount; i++) {
     setTimeout(() => {
       const notification = document.createElement('div');
@@ -49,13 +60,43 @@ function generateRandomNotifications() {
         </div>
         <p>${message}</p>
       `;
-      const x = Math.random() * (window.innerWidth - 250);
-      const y = Math.random() * (window.innerHeight - 180);
+
+      let x, y, positionKey;
+      let attempts = 0;
+      const maxAttempts = 10; // Prevent infinite loops
+
+      do {
+        // Randomly select a grid cell
+        const cellX = Math.floor(Math.random() * gridSize);
+        const cellY = Math.floor(Math.random() * gridSize);
+        // Calculate position within the cell
+        x = Math.max(
+          safeMargin,
+          Math.min(
+            maxX,
+            cellX * cellWidth + Math.random() * (cellWidth - notificationWidth)
+          )
+        );
+        y = Math.max(
+          safeMargin,
+          Math.min(
+            maxY,
+            cellY * cellHeight +
+              Math.random() * (cellHeight - notificationHeight)
+          )
+        );
+        positionKey = `${Math.floor(x / 50)}-${Math.floor(y / 50)}`; // Coarse grid to check for overlap
+        attempts++;
+      } while (usedPositions.has(positionKey) && attempts < maxAttempts);
+
+      if (attempts < maxAttempts) {
+        usedPositions.add(positionKey);
+      }
+
       notification.style.left = x + 'px';
       notification.style.top = y + 'px';
       document.body.appendChild(notification);
       createdNotifications++;
-      if (createdNotifications === notificationCount) showFinalMessage();
     }, i * 200);
   }
 }
@@ -65,82 +106,9 @@ function minimizeNotification(button) {
   notification.style.display = 'none';
 }
 
-function showFinalMessage() {
-  const finalMessage = document.getElementById('finalMessage');
-  finalMessage.style.display = 'block';
-  setTimeout(() => {
-    const extraButton = document.getElementById('extraButton');
-    if (extraButton) extraButton.style.display = 'block';
-  }, 2000);
-}
-
 function redirectToNewPage() {
   window.location.href = 'https://panbap.github.io/heart02/';
 }
-
-// Text morphing
-const elts = {
-  text1: document.getElementById('text1'),
-  text2: document.getElementById('text2'),
-};
-
-const texts = ['Nhấn', 'vào', 'Trái', 'Tim', '❤️'];
-const morphTime = 1;
-const cooldownTime = 0.25;
-
-let textIndex = texts.length - 1;
-let time = new Date();
-let morph = 0;
-let cooldown = cooldownTime;
-
-elts.text1.textContent = texts[textIndex % texts.length];
-elts.text2.textContent = texts[(textIndex + 1) % texts.length];
-
-function doMorph() {
-  morph -= cooldown;
-  cooldown = 0;
-  let fraction = morph / morphTime;
-  if (fraction > 1) {
-    cooldown = cooldownTime;
-    fraction = 1;
-  }
-  setMorph(fraction);
-}
-
-function setMorph(fraction) {
-  elts.text2.style.filter = `blur(${Math.min(8 / fraction - 8, 100)}px)`;
-  elts.text2.style.opacity = `${Math.pow(fraction, 0.4) * 100}%`;
-  fraction = 1 - fraction;
-  elts.text1.style.filter = `blur(${Math.min(8 / fraction - 8, 100)}px)`;
-  elts.text1.style.opacity = `${Math.pow(fraction, 0.4) * 100}%`;
-  elts.text1.textContent = texts[textIndex % texts.length];
-  elts.text2.textContent = texts[(textIndex + 1) % texts.length];
-}
-
-function doCooldown() {
-  morph = 0;
-  elts.text2.style.filter = '';
-  elts.text2.style.opacity = '100%';
-  elts.text1.style.filter = '';
-  elts.text1.style.opacity = '0%';
-}
-
-function animateText() {
-  requestAnimationFrame(animateText);
-  let newTime = new Date();
-  let shouldIncrementIndex = cooldown > 0;
-  let dt = (newTime - time) / 1000;
-  time = newTime;
-  cooldown -= dt;
-  if (cooldown <= 0) {
-    if (shouldIncrementIndex) textIndex++;
-    doMorph();
-  } else {
-    doCooldown();
-  }
-}
-
-animateText();
 
 // Heart particles
 const canvas = document.getElementById('heartCanvas');
@@ -149,7 +117,7 @@ canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 const particles = [];
-const particleCount = 50;
+const particleCount = window.innerWidth <= 767 ? 30 : 50; // Reduce particles on mobile
 
 class Particle {
   constructor() {
@@ -161,7 +129,7 @@ class Particle {
     this.y = Math.random() * canvas.height;
     this.vx = (Math.random() - 0.5) * 2;
     this.vy = Math.random() * 2 + 1;
-    this.size = Math.random() * 10 + 5;
+    this.size = Math.random() * (window.innerWidth <= 767 ? 8 : 10) + 5;
     this.alpha = 1;
   }
 
