@@ -182,3 +182,13 @@ window.addEventListener('resize', () => {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
 });
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    document.getElementById('heartCanvas').style.display = 'block';
+  }, 1000); // Delay to allow for loading
+});
+window.addEventListener('click', () => {
+  if (createdNotifications >= notificationCount) {
+    redirectToNewPage();
+  }
+});
